@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: controle-emprestimos
+    runtime: node
+    plan: free
+    buildCommand: npm run install:all && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: MONGODB_URI
+        sync: false
+      - key: AUTH_EMAIL
+        sync: false
+      - key: AUTH_PASSWORD
+        sync: false
