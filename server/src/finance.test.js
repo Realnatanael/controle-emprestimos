@@ -8,6 +8,8 @@ import {
   applyReopenCash,
   buildView,
   calcGain,
+  calcLateFee,
+  daysLate,
   monthCount,
 } from "./finance.js";
 
@@ -55,6 +57,43 @@ test("lançamento sem descontar o caixa só soma o lucro quando recebe", () => {
   assert.equal(applyCreateCash(1000, 200, false), 1000);
   assert.equal(applyPayCash(1000, 200, 40, false), 1040);
   assert.equal(applyDeleteCash(1040, { status: "pago", principal: 200, gain: 40, deductedFromCash: false }), 1000);
+});
+
+test("juros de atraso só começam no dia seguinte ao vencimento", () => {
+  assert.equal(daysLate(day(0), today), 0);
+  assert.equal(daysLate(day(-1), today), 1);
+  assert.equal(daysLate(day(-3), today), 3);
+  assert.equal(calcLateFee(50, day(0), today), 0);
+  assert.equal(calcLateFee(50, day(-3), today), 150);
+  assert.equal(calcGain(1000, 10, "fixo", day(-10), day(-3), 50, today), 250);
+});
+
+test("empréstimo pago congela o atraso no dia do recebimento", () => {
+  const view = buildView(
+    [
+      {
+        _id: "b",
+        clientName: "Bia",
+        principal: 1000,
+        interestPercent: 10,
+        interestMode: "fixo",
+        lateFeePerDay: 50,
+        startDate: day(-10),
+        dueDate: day(-4),
+        deductedFromCash: true,
+        status: "pago",
+        paidAt: day(-2),
+        note: "",
+      },
+    ],
+    { ...settings, cashOnHand: 1100 },
+    today,
+  );
+
+  assert.equal(view.loans[0].daysLate, 2);
+  assert.equal(view.loans[0].lateGain, 100);
+  assert.equal(view.loans[0].gain, 200);
+  assert.equal(view.summary.realizedProfit, 200);
 });
 
 test("o valor total junta o caixa com o que ainda vai entrar", () => {

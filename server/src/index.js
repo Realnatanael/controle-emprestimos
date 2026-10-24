@@ -29,11 +29,11 @@ if (fs.existsSync(dist)) {
 }
 
 const port = Number(process.env.PORT) || 4000;
-const db = await connectDatabase();
 const server = app.listen(port, "0.0.0.0", () => {
   console.log(`API pronta em http://localhost:${port}`);
-  console.log(`Banco: ${db.mode}`);
 });
+const db = await connectDatabase();
+console.log(`Banco: ${db.mode}`);
 
 async function shutdown() {
   server.close();

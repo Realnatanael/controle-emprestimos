@@ -30,10 +30,27 @@ export function monthCount(startDate, dueDate) {
   return Math.max(1, Math.ceil(days / 30));
 }
 
-export function calcGain(principal, interestPercent, interestMode, startDate, dueDate) {
+export function daysLate(dueDate, asOf = new Date()) {
+  return Math.max(0, -daysUntil(dueDate, asOf));
+}
+
+export function calcAgreedGain(principal, interestPercent, interestMode, startDate, dueDate) {
   const base = roundMoney(principal) * (Number(interestPercent) / 100);
   if (interestMode === "fixo") return roundMoney(base);
   return roundMoney(base * monthCount(startDate, dueDate));
+}
+
+export function calcLateFee(lateFeePerDay, dueDate, asOf = new Date()) {
+  const daily = roundMoney(lateFeePerDay);
+  if (daily <= 0) return 0;
+  return roundMoney(daily * daysLate(dueDate, asOf));
+}
+
+export function calcGain(principal, interestPercent, interestMode, startDate, dueDate, lateFeePerDay = 0, asOf = new Date()) {
+  return roundMoney(
+    calcAgreedGain(principal, interestPercent, interestMode, startDate, dueDate) +
+      calcLateFee(lateFeePerDay, dueDate, asOf),
+  );
 }
 
 export function alertLevel(dueDate, status, settings, today = new Date()) {
@@ -53,19 +70,25 @@ export function dueLabel(days, status) {
   return `${Math.abs(days)} dias de atraso`;
 }
 
-export function describeLoan(input) {
+export function describeLoan(input, today = new Date()) {
   const principal = Number(input.principal);
   const interestPercent = Number(input.interestPercent);
+  const lateFeePerDay = Number(input.lateFeePerDay);
   const start = asDate(input.startDate);
   const due = asDate(input.dueDate);
   const datesOk = !Number.isNaN(start.getTime()) && !Number.isNaN(due.getTime()) && startOfDay(due) >= startOfDay(start);
   const numbersOk = Number.isFinite(principal) && principal > 0 && Number.isFinite(interestPercent) && interestPercent >= 0;
-  if (!datesOk || !numbersOk) {
-    return { months: 0, gain: 0, total: 0, valid: false };
+  const lateOk = !Number.isFinite(lateFeePerDay) || lateFeePerDay >= 0;
+  if (!datesOk || !numbersOk || !lateOk) {
+    return { months: 0, agreedGain: 0, lateGain: 0, daysLate: 0, gain: 0, total: 0, valid: false };
   }
+  const late = Number.isFinite(lateFeePerDay) ? lateFeePerDay : 0;
   const months = input.interestMode === "mensal" ? monthCount(start, due) : null;
-  const gain = calcGain(principal, interestPercent, input.interestMode, start, due);
-  return { months, gain, total: roundMoney(principal + gain), valid: true };
+  const agreedGain = calcAgreedGain(principal, interestPercent, input.interestMode, start, due);
+  const lateDays = daysLate(due, today);
+  const lateGain = calcLateFee(late, due, today);
+  const gain = roundMoney(agreedGain + lateGain);
+  return { months, agreedGain, lateGain, daysLate: lateDays, lateFeePerDay: late, gain, total: roundMoney(principal + gain), valid: true };
 }
 
 export function applyCreateCash(cash, principal, deducted) {
@@ -96,7 +119,12 @@ export function applyPrincipalChange(cash, oldPrincipal, newPrincipal, deducted)
 
 export function presentLoan(loan, settings, today = new Date()) {
   const principal = roundMoney(loan.principal);
-  const gain = calcGain(principal, loan.interestPercent, loan.interestMode, loan.startDate, loan.dueDate);
+  const lateFeePerDay = roundMoney(loan.lateFeePerDay || 0);
+  const asOf = loan.status === "pago" && loan.paidAt ? loan.paidAt : today;
+  const agreedGain = calcAgreedGain(principal, loan.interestPercent, loan.interestMode, loan.startDate, loan.dueDate);
+  const lateDays = daysLate(loan.dueDate, asOf);
+  const lateGain = calcLateFee(lateFeePerDay, loan.dueDate, asOf);
+  const gain = roundMoney(agreedGain + lateGain);
   const days = daysUntil(loan.dueDate, today);
   const level = alertLevel(loan.dueDate, loan.status, settings, today);
   return {
@@ -105,6 +133,7 @@ export function presentLoan(loan, settings, today = new Date()) {
     principal,
     interestPercent: loan.interestPercent,
     interestMode: loan.interestMode,
+    lateFeePerDay,
     startDate: loan.startDate,
     dueDate: loan.dueDate,
     note: loan.note || "",
@@ -112,6 +141,9 @@ export function presentLoan(loan, settings, today = new Date()) {
     status: loan.status,
     paidAt: loan.paidAt || null,
     months: loan.interestMode === "mensal" ? monthCount(loan.startDate, loan.dueDate) : null,
+    agreedGain,
+    daysLate: lateDays,
+    lateGain,
     gain,
     total: roundMoney(principal + gain),
     daysUntil: days,
@@ -140,6 +172,7 @@ export function buildView(loans, settings, today = new Date()) {
     settings: {
       cashOnHand,
       defaultInterestPercent: settings.defaultInterestPercent,
+      defaultLateFeePerDay: roundMoney(settings.defaultLateFeePerDay || 0),
       interestMode: settings.interestMode,
       yellowDays: settings.yellowDays,
       redDays: settings.redDays,

@@ -1,16 +1,34 @@
+import dns from "node:dns";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import mongoose from "mongoose";
 import { isProduction } from "./auth.js";
 
+dns.setDefaultResultOrder("ipv4first");
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+function cleanUri(uri) {
+  return String(uri).trim().replace(/^['"]|['"]$/g, "");
+}
+
 async function connectUri(uri, mode) {
-  await mongoose.connect(uri, {
-    serverSelectionTimeoutMS: isProduction() ? 15000 : 4000,
-    dbName: "controle-emprestimos",
-  });
+  try {
+    await mongoose.connect(cleanUri(uri), {
+      serverSelectionTimeoutMS: isProduction() ? 20000 : 4000,
+      dbName: "controle-emprestimos",
+      family: 4,
+    });
+  } catch (err) {
+    const detail = String(err?.message || err);
+    if (/SSL|TLS|ENOTFOUND|ETIMEOUT|ServerSelection|querySrv/i.test(detail)) {
+      throw new Error(
+        "O Render não conseguiu abrir o MongoDB Atlas. Em Network Access, libere 0.0.0.0/0. Confira se MONGODB_URI está sem aspas e se a senha com @ # % foi copiada do Atlas.",
+      );
+    }
+    throw err;
+  }
   return { mode, mongod: null };
 }
 

@@ -44,7 +44,8 @@ Sem `AUTH_EMAIL` e `AUTH_PASSWORD`, o painel local abre sem login. No Render ess
 | `SESSION_SECRET` | qualquer frase longa e aleatória |
 | `NODE_ENV` | `production` |
 
-5. Depois do deploy, mande para ele o endereço `https://....onrender.com`. Ele entra com o e-mail e a senha. Mais ninguém tem conta.
+5. No Atlas, em **Network Access**, adicione `0.0.0.0/0`. Sem isso o Render cai no TLS. A URI no Render vai **sem aspas**.
+6. Depois do deploy, mande para ele o endereço `https://....onrender.com`. Ele entra com o e-mail e a senha. Mais ninguém tem conta.
 
 ## O que o painel mostra
 
@@ -60,6 +61,7 @@ Ao lançar um empréstimo, o valor sai do caixa. Ao marcar como recebido, voltam
 
 - **Ao mês**: valor × taxa × meses. Cada mês tem 30 dias, e o mês que passar disso conta inteiro.
 - **Fixo**: valor × taxa, uma vez só.
+- **Por dia de atraso**: valor fixo em reais (ex.: R$ 50) que começa no dia seguinte ao vencimento e soma um dia após o outro. No recebimento, esse extra para de crescer.
 
 A taxa dos Ajustes vale para o próximo empréstimo. Os já lançados ficam com a taxa daquele dia.
 

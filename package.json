@@ -2,7 +2,7 @@
   "name": "controle-emprestimos",
   "private": true,
   "engines": {
-    "node": ">=20"
+    "node": "22.x"
   },
   "scripts": {
     "install:all": "npm install && npm install --prefix server --include=dev && npm install --prefix client --include=dev",

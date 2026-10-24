@@ -9,6 +9,7 @@ function blank(settings, loan) {
       clientName: loan.clientName,
       principal: String(loan.principal),
       interestPercent: String(loan.interestPercent),
+      lateFeePerDay: String(loan.lateFeePerDay ?? 0),
       interestMode: loan.interestMode,
       startDate: toInputDate(loan.startDate),
       dueDate: toInputDate(loan.dueDate),
@@ -20,6 +21,7 @@ function blank(settings, loan) {
     clientName: "",
     principal: "",
     interestPercent: String(settings.defaultInterestPercent),
+    lateFeePerDay: String(settings.defaultLateFeePerDay ?? 0),
     interestMode: settings.interestMode,
     startDate: shiftInputDate(0),
     dueDate: shiftInputDate(30),
@@ -43,15 +45,17 @@ export default function LoanDialog({ settings, loan, onClose, onSaved }) {
 
   const principal = parseAmount(form.principal);
   const interestPercent = parseAmount(form.interestPercent);
+  const lateFeePerDay = form.lateFeePerDay === "" ? 0 : parseAmount(form.lateFeePerDay);
   const preview = useMemo(
     () => describeLoan({
       principal,
       interestPercent,
+      lateFeePerDay,
       interestMode: form.interestMode,
       startDate: form.startDate,
       dueDate: form.dueDate,
     }),
-    [principal, interestPercent, form.interestMode, form.startDate, form.dueDate],
+    [principal, interestPercent, lateFeePerDay, form.interestMode, form.startDate, form.dueDate],
   );
 
   function setField(name, value) {
@@ -66,6 +70,7 @@ export default function LoanDialog({ settings, loan, onClose, onSaved }) {
       ...form,
       principal,
       interestPercent,
+      lateFeePerDay,
     };
     try {
       const next = loan ? await updateLoan(loan.id, payload) : await createLoan(payload);
@@ -103,6 +108,10 @@ export default function LoanDialog({ settings, loan, onClose, onSaved }) {
                 <option value="mensal">Ao mês</option>
                 <option value="fixo">Fixo sobre o valor</option>
               </select>
+            </label>
+            <label className="field">
+              Juros por dia de atraso (R$)
+              <input value={form.lateFeePerDay} onChange={(event) => setField("lateFeePerDay", event.target.value)} inputMode="decimal" placeholder="50" />
             </label>
             <label className="field">
               Saída do dinheiro
@@ -146,11 +155,18 @@ export default function LoanDialog({ settings, loan, onClose, onSaved }) {
             </div>
             <p>
               {preview.valid
-                ? `${formula({ ...form, principal, interestPercent, months: preview.months })} · ${modeLabel(form.interestMode)}`
+                ? `${formula({ ...form, principal, interestPercent, lateFeePerDay, months: preview.months, daysLate: preview.daysLate })} · ${modeLabel(form.interestMode)}`
                 : "Preencha valor, juros e datas para ver o ganho."}
             </p>
             {form.interestMode === "mensal" && preview.months ? (
               <p className="hint">Cada mês tem 30 dias. Se passar disso, o mês seguinte entra inteiro. Agora são {preview.months} {preview.months === 1 ? "mês" : "meses"} a {percent(form.interestPercent)}.</p>
+            ) : null}
+            {lateFeePerDay > 0 ? (
+              <p className="hint">
+                {preview.daysLate > 0
+                  ? `Já são ${preview.daysLate} ${preview.daysLate === 1 ? "dia" : "dias"} de atraso: + ${money(preview.lateGain)}.`
+                  : `Depois do vencimento soma ${money(lateFeePerDay)} por dia. O dia do vencimento ainda não conta.`}
+              </p>
             ) : null}
           </div>
 

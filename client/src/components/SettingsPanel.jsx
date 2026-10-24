@@ -7,6 +7,7 @@ export default function SettingsPanel({ data, onChange }) {
   const [amount, setAmount] = useState("");
   const [rules, setRules] = useState({
     defaultInterestPercent: String(settings.defaultInterestPercent),
+    defaultLateFeePerDay: String(settings.defaultLateFeePerDay ?? 0),
     interestMode: settings.interestMode,
     yellowDays: String(settings.yellowDays),
     redDays: String(settings.redDays),
@@ -43,6 +44,7 @@ export default function SettingsPanel({ data, onChange }) {
     run(
       () => saveSettings({
         defaultInterestPercent: Number(String(rules.defaultInterestPercent).replace(",", ".")),
+        defaultLateFeePerDay: Number(String(rules.defaultLateFeePerDay).replace(",", ".") || 0),
         interestMode: rules.interestMode,
         yellowDays: Number(rules.yellowDays),
         redDays: Number(rules.redDays),
@@ -94,6 +96,10 @@ export default function SettingsPanel({ data, onChange }) {
                 <option value="fixo">Fixo sobre o valor</option>
               </select>
             </label>
+            <label className="field span-2">
+              Juros por dia de atraso (R$)
+              <input value={rules.defaultLateFeePerDay} onChange={(event) => setRules({ ...rules, defaultLateFeePerDay: event.target.value })} inputMode="decimal" />
+            </label>
             <label className="field">
               Amarelo a partir de (dias)
               <input type="number" min="1" max="365" value={rules.yellowDays} onChange={(event) => setRules({ ...rules, yellowDays: event.target.value })} required />
@@ -104,7 +110,7 @@ export default function SettingsPanel({ data, onChange }) {
             </label>
           </div>
           <p className="hint">
-            Agora o padrão é {modeLabel(settings.interestMode).toLowerCase()} a {settings.defaultInterestPercent}%. Verde passa de {settings.yellowDays} dias, amarelo vai até esse prazo e vermelho entra em {settings.redDays} dias ou menos.
+            Agora o padrão é {modeLabel(settings.interestMode).toLowerCase()} a {settings.defaultInterestPercent}%. Depois do vencimento soma {money(settings.defaultLateFeePerDay || 0)} por dia. Verde passa de {settings.yellowDays} dias, amarelo vai até esse prazo e vermelho entra em {settings.redDays} dias ou menos.
           </p>
           <div className="actions">
             <button type="submit" className="btn primary" disabled={pending}>Salvar juros e alertas</button>

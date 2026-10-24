@@ -70,6 +70,15 @@ function readLoanInput(body, settings, { partial } = {}) {
     throw new HttpError(400, "Os juros precisam ficar entre 0% e 1000%.");
   }
 
+  const lateFeePerDay = roundMoney(
+    body.lateFeePerDay === undefined || body.lateFeePerDay === ""
+      ? settings.defaultLateFeePerDay || 0
+      : readNumber(body.lateFeePerDay, "O juro por dia de atraso"),
+  );
+  if (lateFeePerDay < 0 || lateFeePerDay > 1000000) {
+    throw new HttpError(400, "O juro por dia de atraso precisa ser zero ou maior.");
+  }
+
   const interestMode = body.interestMode || settings.interestMode;
   if (!["mensal", "fixo"].includes(interestMode)) {
     throw new HttpError(400, "Escolha juros ao mês ou juros fixos.");
@@ -84,7 +93,7 @@ function readLoanInput(body, settings, { partial } = {}) {
   const note = String(body.note ?? "").trim().slice(0, 280);
   const deductedFromCash = partial ? undefined : body.deductedFromCash !== false;
 
-  return { clientName, principal, interestPercent, interestMode, startDate, dueDate, note, deductedFromCash };
+  return { clientName, principal, interestPercent, lateFeePerDay, interestMode, startDate, dueDate, note, deductedFromCash };
 }
 
 async function loadLoan(id) {
@@ -152,7 +161,17 @@ api.put("/settings", wrap(async (req, res) => {
     throw new HttpError(400, "O vermelho precisa ficar mais perto do vencimento do que o amarelo.");
   }
 
+  const lateFeePerDay = roundMoney(
+    req.body.defaultLateFeePerDay === undefined || req.body.defaultLateFeePerDay === ""
+      ? 0
+      : readNumber(req.body.defaultLateFeePerDay, "O juro por dia de atraso"),
+  );
+  if (lateFeePerDay < 0 || lateFeePerDay > 1000000) {
+    throw new HttpError(400, "O juro por dia de atraso precisa ser zero ou maior.");
+  }
+
   settings.defaultInterestPercent = interestPercent;
+  settings.defaultLateFeePerDay = lateFeePerDay;
   settings.interestMode = req.body.interestMode;
   settings.yellowDays = yellowDays;
   settings.redDays = redDays;
@@ -194,6 +213,7 @@ api.put("/loans/:id", wrap(async (req, res) => {
   loan.clientName = input.clientName;
   loan.principal = input.principal;
   loan.interestPercent = input.interestPercent;
+  loan.lateFeePerDay = input.lateFeePerDay;
   loan.interestMode = input.interestMode;
   loan.startDate = input.startDate;
   loan.dueDate = input.dueDate;

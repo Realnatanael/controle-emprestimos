@@ -37,11 +37,16 @@ export function parseAmount(text) {
 
 export function formula(loan) {
   const base = `${money(loan.principal)} × ${percent(loan.interestPercent)}`;
-  if (loan.interestMode === "mensal") {
-    const months = loan.months || 1;
-    return `${base} × ${months} ${months === 1 ? "mês" : "meses"}`;
+  let text = loan.interestMode === "mensal"
+    ? `${base} × ${loan.months || 1} ${(loan.months || 1) === 1 ? "mês" : "meses"}`
+    : `${base} fixo`;
+  if (Number(loan.lateFeePerDay) > 0) {
+    const days = Number(loan.daysLate) || 0;
+    text += days > 0
+      ? ` + ${money(loan.lateFeePerDay)} × ${days} ${days === 1 ? "dia" : "dias"} de atraso`
+      : ` + ${money(loan.lateFeePerDay)} por dia após o vencimento`;
   }
-  return `${base} fixo`;
+  return text;
 }
 
 export function modeLabel(mode) {
