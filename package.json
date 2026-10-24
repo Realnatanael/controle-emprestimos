@@ -5,10 +5,10 @@
     "node": ">=20"
   },
   "scripts": {
-    "install:all": "npm install && npm install --prefix server && npm install --prefix client",
+    "install:all": "npm install && npm install --prefix server --include=dev && npm install --prefix client --include=dev",
     "dev": "concurrently -n api,web -c green,blue \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
     "test": "npm test --prefix server",
-    "build": "npm run build --prefix client",
+    "build": "npm install --prefix server --include=dev && npm install --prefix client --include=dev && npm run build --prefix client",
     "start": "npm run start --prefix server"
   },
   "devDependencies": {

@@ -32,7 +32,7 @@ Sem `AUTH_EMAIL` e `AUTH_PASSWORD`, o painel local abre sem login. No Render ess
 1. Suba o projeto no GitHub.
 2. Crie um cluster gratuito no [MongoDB Atlas](https://www.mongodb.com/cloud/atlas). Em Network Access, libere `0.0.0.0/0`. Copie a connection string (`mongodb+srv://...`).
 3. No Render, crie um **Web Service** apontando para o repositório. Se aparecer o `render.yaml`, aceite. Senão use:
-   - **Build command:** `npm run install:all && npm run build`
+   - **Build command:** `npm run build`
    - **Start command:** `npm start`
 4. Em **Environment**, coloque só isto (não grave senha no código):
 
